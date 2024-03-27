@@ -1,0 +1,11 @@
+### get test
+GET http://localhost:8080/test/diary
+
+### post diary
+POST http://localhost:8080/create/diary
+Content-Type: application/json
+
+{
+  "date" : "2022-05-11",
+  "text" : "hi"
+}
