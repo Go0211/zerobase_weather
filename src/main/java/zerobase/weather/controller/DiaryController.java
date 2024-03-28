@@ -1,29 +1,41 @@
 package zerobase.weather.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import zerobase.weather.domain.Diary;
+import zerobase.weather.dto.DateRequest;
 import zerobase.weather.dto.DiaryRequest;
 import zerobase.weather.service.DiaryService;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
 public class DiaryController {
     private final DiaryService diaryService;
 
-    @PostMapping ("/create/diary")
+    @PostMapping("/create/diary")
     void createDiary(@RequestBody DiaryRequest request) {
-
         diaryService.createDiary(request.getDate(), request.getText());
     }
 
-    @GetMapping("/test/diary")
-    void testDiary() {
-        diaryService.createDiary();
+    @GetMapping("/read/diary")
+    List<Diary> readDiary(@RequestBody DiaryRequest request) {
+        return diaryService.readDiary(request.getDate());
+    }
+
+    @GetMapping("/read/diaries")
+    List<Diary> readDiaries(@RequestBody DateRequest request) {
+        return diaryService.readDiaries(request.getStartDate(), request.getEndDate());
+    }
+
+    @PutMapping("/update/diary")
+    void updateDiary(@RequestBody DiaryRequest request) {
+        diaryService.updateDiary(request.getDate(), request.getText());
+    }
+
+    @DeleteMapping("/delete/diary")
+    void deleteDiary(@RequestBody DiaryRequest request) {
+        diaryService.deleteDiary(request.getDate());
     }
 }

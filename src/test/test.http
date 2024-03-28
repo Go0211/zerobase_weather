@@ -1,11 +1,51 @@
-### get test
-GET http://localhost:8080/test/diary
+### get diary test
+GET http://localhost:8080/read/diary
+Content-Type: application/json
+
+{
+  "date" : "2022-03-11"
+}
+
+### get diaries test
+GET http://localhost:8080/read/diaries
+Content-Type: application/json
+
+{
+  "startDate" : "2022-03-10",
+  "endDate" : "2022-05-12"
+}
+
+### put first diary test
+PUT http://localhost:8080/update/diary
+Content-Type: application/json
+
+{
+  "date" : "2022-03-11",
+  "text" : "change"
+}
+
+### put first diary test
+DELETE http://localhost:8080/delete/diary
+Content-Type: application/json
+
+{
+  "date" : "2022-03-11"
+}
+
 
 ### post diary
 POST http://localhost:8080/create/diary
 Content-Type: application/json
 
 {
-  "date" : "2022-05-11",
-  "text" : "hi"
+  "date": "2022-03-11",
+  "text": "hi"
+}
+
+### error test
+GET http://localhost:8080/read/diary
+Content-Type: application/json
+
+{
+  "date" : "??"
 }

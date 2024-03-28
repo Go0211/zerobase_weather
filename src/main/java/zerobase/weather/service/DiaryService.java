@@ -1,15 +1,22 @@
 package zerobase.weather.service;
 
 
-import com.mysql.cj.xdevapi.JsonArray;
 import lombok.RequiredArgsConstructor;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import zerobase.weather.WeatherApplication;
+import zerobase.weather.domain.DateWeather;
 import zerobase.weather.domain.Diary;
+import zerobase.weather.error.InvalidDate;
+import zerobase.weather.repository.DateWeatherRepository;
 import zerobase.weather.repository.DiaryRepository;
 
 import java.io.BufferedReader;
@@ -18,46 +25,80 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class DiaryService {
     private final DiaryRepository diaryRepository;
+    private final DateWeatherRepository dateWeatherRepository;
+
+    private static final Logger logger = LoggerFactory.getLogger(WeatherApplication.class);
 
     @Value("${weather.apiKey}")
     private String apiKey;
 
-    public void createDiary() {
+    @Scheduled(cron = "0 0 1 * * *")
+    public void saveWeatherDate() {
+        dateWeatherRepository.save(getWeatherFromApi());
+    }
+
+    private DateWeather getWeatherFromApi() {
         String weatherData = getWeatherString();
-
         Map<String, Object> parseWeather = parseWeather(weatherData);
-        System.out.println(parseWeather.keySet());
-        System.out.println(parseWeather.values());
 
-        Diary diary = new Diary();
-        diary.setWeather(parseWeather.get("main").toString());
-        diary.setIcon(parseWeather.get("icon").toString());
-        diary.setTemperature(Double.parseDouble(parseWeather.get("temp").toString()));
-        diary.setText("hi");
-        diary.setDate(LocalDate.now());
+        DateWeather dateWeather = new DateWeather();
+        dateWeather.setDate(LocalDate.now());
+        dateWeather.setWeather(parseWeather.get("main").toString());
+        dateWeather.setIcon(parseWeather.get("icon").toString());
+        dateWeather.setTemperature(Double.parseDouble(parseWeather.get("temp").toString()));
 
-        diaryRepository.save(diary);
+        return dateWeather;
+    }
+
+    public DateWeather getDateWeather(LocalDate date) {
+        List<DateWeather> dateWeatherList = dateWeatherRepository.findAllByDate(date);
+        if (dateWeatherList.size() == 0) {
+            return getWeatherFromApi();
+        }
+        return dateWeatherList.get(0);
     }
 
     public void createDiary(LocalDate date, String text) {
-        String weatherData = getWeatherString();
+        DateWeather dateWeather = getDateWeather(date);
 
-        Map<String, Object> parseWeather = parseWeather(weatherData);
-
+        logger.info("start create diary");
         Diary diary = new Diary();
-        diary.setWeather(parseWeather.get("main").toString());
-        diary.setIcon(parseWeather.get("icon").toString());
-        diary.setTemperature(Double.parseDouble(parseWeather.get("temp").toString()));
+        diary.setDateWeather(dateWeather);
         diary.setText(text);
-        diary.setDate(date);
 
         diaryRepository.save(diary);
+
+        logger.info("end create diary");
+    }
+
+    public List<Diary> readDiary(LocalDate date) {
+        if (date.isAfter(LocalDate.ofYearDay(3050, 1))) {
+            throw new InvalidDate();
+        }
+        logger.debug("read diary");
+        return diaryRepository.findAllByDate(date);
+    }
+
+    public List<Diary> readDiaries(LocalDate startDate, LocalDate endDate) {
+        return diaryRepository.findAllByDateBetween(startDate, endDate);
+    }
+
+    public void updateDiary(LocalDate date, String text) {
+        Diary diary = diaryRepository.getFirstByDate(date);
+        diary.setText(text);
+        diaryRepository.save(diary);
+    }
+
+    public void deleteDiary(LocalDate date) {
+        diaryRepository.deleteAllByDate(date);
     }
 
     private String getWeatherString() {
